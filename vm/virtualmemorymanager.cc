@@ -62,12 +62,51 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
 
         FrameInfo * physPageInfo = physicalMemoryInfo + nextVictim;
         //We assume this page is not occupied by any process space
-        physPageInfo->space = currentThread->space;
-        physPageInfo->pageTableIndex = virtAddr / PageSize;
-        currPageEntry = getPageTableEntry(physPageInfo);
-        currPageEntry->physicalPage = memoryManager->getPage();
-        loadPageToCurrVictim(virtAddr);
+
+        //second chance algorithm performed in this while loop. The final product
+        //is either the new victim or a NULL pointer
+        while(physPageInfo != NULL && getPageTableEntry(physPageInfo)->use == true){
+            getPageTableEntry(physPageInfo)->use = false;
+            nextVictim = nextVictim + 1;
+            nextVictim = nextVictim % NumPhysPages;
+            physPageInfo = physicalMemoryInfo + nextVictim;
+        }
+
+        if(physPageInfo->space == NULL){
+            physPageInfo = new FrameInfo();
+            physPageInfo->space = currentThread->space;
+            physPageInfo->pageTableIndex = virtAddr / PageSize;
+            currPageEntry = getPageTableEntry(physPageInfo);
+            currPageEntry->physicalPage = memoryManager->getPage();
+            loadPageToCurrVictim(virtAddr); //figure out exactly what this line does 
+        }
+        else{ //if we have an actual page to replace (not an empty slot)
+            TranslationEntry* garb = getPageTableEntry(physPageInfo);
+            if(garb->dirty == true){ //check to see if we have to write back to disk (SWAP)
+                char* pageToCopy = machine->mainMemory + garb->physicalPage * pageSize;
+                swapFile->WriteAt(pageToCopy, PageSize, garb->locationOnDisk);
+                garb->dirty = false; 
+            }
+            //start the swap
+            physPageInfo->space = currentThread->space; 
+            physPageInfo->pageTableIndex = virtAddr / PageSize;
+            currPageEntry = getPageTableEntry(physPageInfo);
+            currPageEntry->physicalPage = garb->physicalPage;
+            loadPageToCurrVictim(virtAddr);
+            garb->valid = false;
+        }
+
+        //increment nextVictim so we don't always replace same page :)
         nextVictim = nextVictim + 1;
+        nextVictim = nextVictim % NumPhysPages;
+
+
+        // physPageInfo->space = currentThread->space;
+        // physPageInfo->pageTableIndex = virtAddr / PageSize;
+        // currPageEntry = getPageTableEntry(physPageInfo);
+        // currPageEntry->physicalPage = memoryManager->getPage();
+        // loadPageToCurrVictim(virtAddr);
+        // nextVictim = nextVictim + 1;
 }
 
 
