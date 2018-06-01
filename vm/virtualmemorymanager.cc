@@ -83,7 +83,7 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
         else{ //if we have an actual page to replace (not an empty slot)
             TranslationEntry* garb = getPageTableEntry(physPageInfo);
             if(garb->dirty == true){ //check to see if we have to write back to disk (SWAP)
-                char* pageToCopy = machine->mainMemory + garb->physicalPage * pageSize;
+                char* pageToCopy = machine->mainMemory + garb->physicalPage * PageSize;
                 swapFile->WriteAt(pageToCopy, PageSize, garb->locationOnDisk);
                 garb->dirty = false; 
             }
