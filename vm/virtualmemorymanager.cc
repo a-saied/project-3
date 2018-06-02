@@ -62,7 +62,8 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
 
         FrameInfo * physPageInfo = physicalMemoryInfo + nextVictim;
         //We assume this page is not occupied by any process space
-
+	physPageInfo->space = currentThread->space;
+	//physPageInfo->pageTableIndex = virtAddr / PageSize;
         //second chance algorithm performed in this while loop. The final product
         //is either the new victim or a NULL pointer
         while(physPageInfo != NULL && getPageTableEntry(physPageInfo)->use == true){
@@ -73,9 +74,8 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
         }
 
         if(physPageInfo->space == NULL){
-            physPageInfo = new FrameInfo();
-            physPageInfo->space = currentThread->space;
-            physPageInfo->pageTableIndex = virtAddr / PageSize;
+	  //physPageInfo->space = currentThread->space;
+	  physPageInfo->pageTableIndex = virtAddr / PageSize;
             currPageEntry = getPageTableEntry(physPageInfo);
             currPageEntry->physicalPage = memoryManager->getPage();
             loadPageToCurrVictim(virtAddr); //figure out exactly what this line does 
@@ -88,7 +88,7 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
                 garb->dirty = false; 
             }
             //start the swap
-            physPageInfo->space = currentThread->space; 
+            //physPageInfo->space = currentThread->space; 
             physPageInfo->pageTableIndex = virtAddr / PageSize;
             currPageEntry = getPageTableEntry(physPageInfo);
             currPageEntry->physicalPage = garb->physicalPage;
@@ -163,6 +163,7 @@ void VirtualMemoryManager::loadPageToCurrVictim(int virtAddr)
  */
 TranslationEntry* VirtualMemoryManager::getPageTableEntry(FrameInfo * physPageInfo)
 {
+  //fprintf(stderr, "%d\n", physPageInfo->pageTableIndex);
     TranslationEntry* page = physPageInfo->space->getPageTableEntry(physPageInfo->pageTableIndex);
     return page;
 }
