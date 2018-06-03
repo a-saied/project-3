@@ -18,6 +18,9 @@ VirtualMemoryManager::VirtualMemoryManager()
     swapSectorMap = new BitMap(SWAP_SECTORS);
     physicalMemoryInfo = new FrameInfo[NumPhysPages];
     //swapSpaceInfo = new SwapSectorInfo[SWAP_SECTORS];
+    for(int i = 0; i < NumPhysPages; i++){
+      physicalMemoryInfo[i].space = NULL;
+    }
     nextVictim = 0;
 }
 
@@ -52,43 +55,47 @@ void VirtualMemoryManager::writeToSwap(char *page, int pageSize,
  */
 void VirtualMemoryManager::swapPageIn(int virtAddr)
 {
-
         TranslationEntry* currPageEntry;
-        if(nextVictim>= NumPhysPages) {//no more space available
+        /*if(nextVictim>= NumPhysPages) {//no more space available
                 fprintf(stderr, "Fatal error: No more space available\n");
                 exit(1);
                 return;
         }
-
-        FrameInfo * physPageInfo = physicalMemoryInfo + nextVictim;
+	*/
+	
+        FrameInfo* physPageInfo = physicalMemoryInfo + nextVictim;
+	int i = 0;
         //We assume this page is not occupied by any process space
-	physPageInfo->space = currentThread->space;
+	//physPageInfo->space = currentThread->space;
 	//physPageInfo->pageTableIndex = virtAddr / PageSize;
         //second chance algorithm performed in this while loop. The final product
         //is either the new victim or a NULL pointer
-        while(physPageInfo != NULL && getPageTableEntry(physPageInfo)->use == true){
+	//fprintf(stderr, "%d\n", i++);
+        while(physPageInfo->space != NULL && getPageTableEntry(physPageInfo)->use == true){
             getPageTableEntry(physPageInfo)->use = false;
             nextVictim = nextVictim + 1;
             nextVictim = nextVictim % NumPhysPages;
             physPageInfo = physicalMemoryInfo + nextVictim;
+	    //fprintf(stderr, "%d\n", i++);
         }
 
         if(physPageInfo->space == NULL){
-	  //physPageInfo->space = currentThread->space;
+	  *physPageInfo = FrameInfo();
+	  physPageInfo->space = currentThread->space;
 	  physPageInfo->pageTableIndex = virtAddr / PageSize;
             currPageEntry = getPageTableEntry(physPageInfo);
             currPageEntry->physicalPage = memoryManager->getPage();
-            loadPageToCurrVictim(virtAddr); //figure out exactly what this line does 
+            loadPageToCurrVictim(virtAddr);
         }
         else{ //if we have an actual page to replace (not an empty slot)
             TranslationEntry* garb = getPageTableEntry(physPageInfo);
             if(garb->dirty == true){ //check to see if we have to write back to disk (SWAP)
                 char* pageToCopy = machine->mainMemory + garb->physicalPage * PageSize;
-                swapFile->WriteAt(pageToCopy, PageSize, garb->locationOnDisk);
+                writeToSwap(pageToCopy, PageSize, garb->locationOnDisk);
                 garb->dirty = false; 
             }
             //start the swap
-            //physPageInfo->space = currentThread->space; 
+            physPageInfo->space = currentThread->space; 
             physPageInfo->pageTableIndex = virtAddr / PageSize;
             currPageEntry = getPageTableEntry(physPageInfo);
             currPageEntry->physicalPage = garb->physicalPage;
