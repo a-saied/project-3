@@ -1,0 +1,9 @@
+Ahmed Saied
+Matt Speck
+Mark Wu
+
+The reason mips binary instructions and system calls may trigger page fault exceptions is because they try to access data that is not loaded into memory, but held in the disk. To access these, we must perform a page swap.
+
+The reason testvmfork works with the starter code is because of the lack of accessing the buffer at any time during the program. This means that, regardless of memory size, we will never have to perform page replacement, because there is no moment where we actually access the memory. 
+
+All parts of project 3A works perfectly (It's unclear if this should include summary on parts of project 3B). 
