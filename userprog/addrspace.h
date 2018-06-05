@@ -43,6 +43,7 @@ class AddrSpace {
     int getPageIndex(TranslationEntry* page);
     TranslationEntry *pageTable;	// Assume linear page table translation
 					// for now!
+    int* locationsOnDisk;
 
   private:
     unsigned int numPages;		// Number of pages in the virtual 
